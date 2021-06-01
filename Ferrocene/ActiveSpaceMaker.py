@@ -424,10 +424,14 @@ _NumPiElec = {
 _CovalentRadii = {1: 38.0, 2: 32.0, 3: 134.0, 4: 90.0, 5: 82.0, 6: 77.0, 7: 75.0, 8: 73.0, 9: 71.0, 10: 69.0, 11: 154.0, 12: 130.0, 13: 118.0, 14: 111.0, 15: 106.0, 16: 102.0, 17: 99.0, 18: 97.0, 19: 196.0, 20: 174.0, 21: 144.0, 22: 136.0, 23: 125.0, 24: 127.0, 25: 139.0, 26: 125.0, 27: 126.0, 28: 121.0, 29: 138.0, 30: 131.0, 31: 126.0, 32: 122.0, 33: 119.0, 34: 116.0, 35: 114.0, 36: 110.0, 37: 211.0, 38: 192.0, 39: 162.0, 40: 148.0, 41: 137.0, 42: 145.0, 43: 156.0, 44: 126.0, 45: 135.0, 46: 131.0, 47: 153.0, 48: 148.0, 49: 144.0, 50: 141.0, 51: 138.0, 52: 135.0, 53: 133.0, 54: 130.0, 55: 225.0, 56: 198.0, 57: 169.0, 58: None, 59: None, 60: None, 61: None, 62: None, 63: None, 64: None, 65: None, 66: None, 67: None, 68: None, 69: None, 70: None, 71: 160.0, 72: 150.0, 73: 138.0, 74: 146.0, 75: 159.0, 76: 128.0, 77: 137.0, 78: 128.0, 79: 144.0, 80: 149.0, 81: 148.0, 82: 147.0, 83: 146.0, 84: None, 85: None, 86: 145.0, 87: None, 88: None, 89: None, 90: None, 91: None, 92: None, 93: None, 94: None, 95: None, 96: None, 97: None, 98: None, 99: None, 100: None, 101: None, 102: None, 103: None, 104: None, 105: None, 106: None, 107: None, 108: None, 109: None, 110: None, 111: None, 112: None, 113: None, 114: None, 115: None, 116: None}
 # ^- embedded now to remove dependency on finding .txt path.
 
-
 def GetCovalentRadius(At):
    # get covalent radius in pm
-   rcov = _CovalentRadii[At.iElement]
+   ElementNames = "X H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I Xe Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn".split()
+   ElementNumbers = dict([(o,i) for (i,o) in enumerate(ElementNames)])
+   if (len(At)>2):
+    At=At[:len(At)-2]
+   iElement=ElementNumbers[At]
+   rcov = _CovalentRadii[iElement]
    assert(rcov is not None)
    # convert to bohr radii
    ToAng = 0.52917721092
@@ -439,14 +443,14 @@ def GetNumPiElec(iAt, Elements,Coords):
    nPiTab = _NumPiElec.get(At, None)
    if nPiTab is not None:
       return nPiTab
-   print(" ...determining formal number of pi-electrons for {} (not in table).",At)
-   
+   print(" ...determining formal number of pi-electrons for {} (not in table).",At, " ",iAt)
+
    # find number of bonded partners
    iBonded = []
    for (jAt, AtJ) in enumerate(Elements):
       if iAt == jAt:
          continue
-      rij = np.sum((Coords[At] - Coords[AtJ])**2)**.5
+      rij = np.sum((Coords[iAt] - Coords[jAt])**2)**.5
       if rij < 1.3 * (GetCovalentRadius(At) + GetCovalentRadius(AtJ)):
          iBonded.append(jAt)
 
@@ -497,18 +501,16 @@ def MakeOverlappingOrbSubspace(Space, Name, COrb, nOrbExpected,  CTargetIb, S1, 
    print("    Sigma[{}]                         ".format(nOrbExpected-1), "{:.4f}".format(sig[nOrbExpected-1])," (should be 1)")
    if nOrbExpected < len(sig):
       print("    Sigma[{}]                         ".format(nOrbExpected), "{:.4f}".format(sig[nOrbExpected])," (should be 0)")
-      if sig[nOrbExpected-1] < 0.8 or sig[nOrbExpected] > 0.5:
-         raise Exception("{} orbital construction okay?".format(Space))
    
    
    V = Vt.T
-   COut = np.dot(COrb, V[:,:nOrbExpected])
    #======================correct the N of orbitals for AVAS
    n_orb_avas=0
    for orb in range(len(sig)):
     if sig[orb]>0.1:
      n_orb_avas+=1
    nOrbExpected=n_orb_avas
+   COut = np.dot(COrb, V[:,:nOrbExpected])
    return SemiCanonicalize(COut, Fock, S1, Name),nOrbExpected
    
 

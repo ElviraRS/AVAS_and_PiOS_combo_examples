@@ -418,7 +418,12 @@ _CovalentRadii = {1: 38.0, 2: 32.0, 3: 134.0, 4: 90.0, 5: 82.0, 6: 77.0, 7: 75.0
 
 def GetCovalentRadius(At):
    # get covalent radius in pm
-   rcov = _CovalentRadii[At.iElement]
+   ElementNames = "X H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I Xe Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn".split()
+   ElementNumbers = dict([(o,i) for (i,o) in enumerate(ElementNames)])
+   if (len(At)>2):
+    At=At[:len(At)-2]
+   iElement=ElementNumbers[At]
+   rcov = _CovalentRadii[iElement]
    assert(rcov is not None)
    # convert to bohr radii
    ToAng = 0.52917721092
@@ -430,14 +435,14 @@ def GetNumPiElec(iAt, Elements,Coords):
    nPiTab = _NumPiElec.get(At, None)
    if nPiTab is not None:
       return nPiTab
-   print(" ...determining formal number of pi-electrons for {} (not in table).",At)
-   
+   print(" ...determining formal number of pi-electrons for {} (not in table).",At, " ",iAt)
+
    # find number of bonded partners
    iBonded = []
    for (jAt, AtJ) in enumerate(Elements):
       if iAt == jAt:
          continue
-      rij = np.sum((Coords[At] - Coords[AtJ])**2)**.5
+      rij = np.sum((Coords[iAt] - Coords[jAt])**2)**.5
       if rij < 1.3 * (GetCovalentRadius(At) + GetCovalentRadius(AtJ)):
          iBonded.append(jAt)
 
