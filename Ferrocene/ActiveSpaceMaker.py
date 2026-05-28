@@ -554,9 +554,9 @@ def MakePiSystemOrbitals(TargetName, iTargetAtomsForPlane_, iTargetAtomsForBasis
    print ("    size of CIb2          {} ".format(CIb.shape[1]))
    print ("    size of CAomix2       {} ".format(CAoMix.shape[1]))
 
+   nOccOrbExpected=int(nPiElec//2)
+   nVirtOrbExpected=int(nTargetIb - nPiElec//2)
    
-   nOccOrbExpected=nPiElec/2
-   nVirtOrbExpected=nTargetIb - nPiElec/2
    CPiOcc,nOccOrbExpected = MakeOverlappingOrbSubspace("Pi", "Occ", COcc, nOccOrbExpected,   CTargetIb, S1, Fock)
    CPiVir,nVirtOrbExpected = MakeOverlappingOrbSubspace("Pi", "Vir", CVir, nVirtOrbExpected,   CTargetIb, S1, Fock)
    return CPiOcc, CPiVir,nOccOrbExpected,nVirtOrbExpected

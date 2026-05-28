@@ -121,17 +121,16 @@ def MakePiOS(mol,mf,PiAtomsList, nPiOcc=None,nPiVirt=None):
    Eps = mf.mo_energy    
 
    nOrb = C.shape[1]
-   if (mol.spin==0):
-     nOcc = np.sum(Occ == 2)
-   else:
-     nOcc = np.sum(Occ == 2)+np.sum(Occ == 1)
-     n1=np.sum(Occ == 1)
-     print ("    Number of singly occupied orbitals      {} ".format(n1))
-
+   n2Occ = np.sum(Occ == 2)
+   n1Occ = np.sum(Occ == 1)
+   nOcc=n2Occ+n1Occ
    nVir = np.sum(Occ == 0)
-   assert(nOcc + nVir == nOrb)
-   print ("    Number of occupied orbitals      {} ".format(nOcc))
+   assert(n2Occ + n1Occ + nVir == nOrb)
+   print ("    Number of all occupied orbitals      {} ".format(nOcc))
+   print ("    Number of doubly occupied orbitals      {} ".format(n2Occ))
+   print ("    Number of singly occupied orbitals      {} ".format(n1Occ))
    print ("    Number of unoccupied orbitals    {} ".format(nVir))
+
 
    # Compute Fock matrix from orbital eigenvalues (SCF has to be fully converged)
    Fock = mdot(S1, C, np.diag(Eps), C.T, S1.T)
@@ -195,19 +194,24 @@ def MakePiOS(mol,mf,PiAtomsList, nPiOcc=None,nPiVirt=None):
    
 
    # add pi-HOMOs and pi-LUMOs
-   CFragOcc, CFragVir,nOccOrbExpected,nVirtOrbExpected = MakePiSystemOrbitals("Pi-System", PiAtomsList, None, Elements,Coords, CIb, Shells, S1, S12, S2, Fock, COcc, CVir)
-   if (nPiOcc==None):
-    for i in range(1,nOccOrbExpected+1):  
-      CActOcc.append(CFragOcc[:,-i])
-   else:
-    for i in range(1,nPiOcc+1):
-      CActOcc.append(CFragOcc[:,-i])
+   CFragOcc, CFragVir,nOccOrbExpected,nVirtOrbExpected = MakePiSystemOrbitalsNonPlanar("Pi-System", PiAtomsList, None, Elements,Coords, CIb, Shells, S1, S12, S2, Fock, COcc, CVir)
 
-   if (nPiVirt==None):
-    for j in range(nVirtOrbExpected):
-      CActVir.append(CFragVir[:,j])
-   else:
-    for j in range(nPiVirt):
+#   if (nPiOcc==None):
+#    for i in range(1,nOccOrbExpected+1):  
+#      CActOcc.append(CFragOcc[:,-i])
+#   else:
+#    for i in range(1,nPiOcc+1):
+#      CActOcc.append(CFragOcc[:,-i])
+#
+#   if (nPiVirt==None):
+#    for j in range(nVirtOrbExpected):
+#      CActVir.append(CFragVir[:,j])
+#   else:
+#    for j in range(nPiVirt):
+#      CActVir.append(CFragVir[:,j])
+   for i in range(1,nOccOrbExpected+1):
+      CActOcc.append(CFragOcc[:,-i])
+   for j in range(nVirtOrbExpected):
       CActVir.append(CFragVir[:,j])
 
 
@@ -219,7 +223,7 @@ def MakePiOS(mol,mf,PiAtomsList, nPiOcc=None,nPiVirt=None):
    if (mol.spin==0):
      nElec = 2*len(CActOcc)
    else:
-     nElec = 2*len(CActOcc)-n1
+     nElec = 2*len(CActOcc)-n1Occ
    CAct = np.array(CActOcc + CActVir).T
    if 0:
       # orthogonalize and semi-canonicalize
@@ -392,6 +396,7 @@ _NumPiElec = {
    "P2e": 2,
    "S1e": 1,
    "S2e": 2,
+   "S":2,
    "C2e": 2,
 }
 
@@ -446,6 +451,7 @@ def GetNumPiElec(iAt, Elements,Coords):
       elif nBonds == 3:
          # two sigma bond (1e each) + 1 lone pairs in x/y planes (2e) -> 2e left for pi system
          return 2
+
    raise Exception("GetNumPiElec({}): {} with {} bonds not tabulated :(".format(iAt, At,  nBonds))
 
 
@@ -471,18 +477,24 @@ def MakeOverlappingOrbSubspace(Space, Name, COrb, nOrbExpected,  CTargetIb, S1, 
 
    STargetIbVir = mdot(SmhTargetIb, CTargetIb.T, S1, COrb)
    U,sig,Vt = np.linalg.svd(STargetIbVir, full_matrices=False)
-    
+   sig=np.multiply(sig,sig)  # This gives you the overlap with the target AO space for PiOS or AVAS    
    print("    S[{},{}] singular Values (n={}, nThr={})".format(Space, Name, len(sig), nOrbExpected))
    print("    [{}]".format(', '.join('{:.4f}'.format(k) for k in sig)))
-   print("    Sigma[{}]                         ".format(nOrbExpected-1), "{:.4f}".format(sig[nOrbExpected-1])," (should be 1)")
-   if nOrbExpected < len(sig):
-      print("    Sigma[{}]                         ".format(nOrbExpected), "{:.4f}".format(sig[nOrbExpected])," (should be 0)")
-      if sig[nOrbExpected-1] < 0.8 or sig[nOrbExpected] > 0.5:
-         raise Exception("{} orbital construction okay?".format(Space))
-   
+#   print("    Sigma[{}]                         ".format(nOrbExpected-1), "{:.4f}".format(sig[nOrbExpected-1])," (should be 1)")
+#   if nOrbExpected < len(sig):
+#      print("    Sigma[{}]                         ".format(nOrbExpected), "{:.4f}".format(sig[nOrbExpected])," (should be 0)")
+#      if sig[nOrbExpected-1] < 0.8 or sig[nOrbExpected] > 0.5:
+#         raise Exception("{} orbital construction okay?".format(Space))
+   n_orb_avas=0
+   for orb in range(len(sig)):
+    if sig[orb]>0.2:
+     n_orb_avas+=1
+   nOrbExpected=n_orb_avas
+
+   print (" expected number of orbitals", nOrbExpected)
    V = Vt.T
    COut = np.dot(COrb, V[:,:nOrbExpected])
-   return SemiCanonicalize(COut, Fock, S1, Name)
+   return SemiCanonicalize(COut, Fock, S1, Name),nOrbExpected
    
 
 
@@ -525,13 +537,95 @@ def MakePiSystemOrbitals(TargetName, iTargetAtomsForPlane_, iTargetAtomsForBasis
    print ("    size of CIb2          {} ".format(CIb.shape[1]))
    print ("    size of CAomix2       {} ".format(CAoMix.shape[1]))
 
-
-   nOccOrbExpected=int(nPiElec//2)
-   nVirtOrbExpected=int(nTargetIb - nPiElec//2)
-
-   CPiOcc = MakeOverlappingOrbSubspace("Pi", "Occ", COcc, nOccOrbExpected,   CTargetIb, S1, Fock)
-   CPiVir = MakeOverlappingOrbSubspace("Pi", "Vir", CVir, nVirtOrbExpected,   CTargetIb, S1, Fock)
+   nOccOrbExpected=int(nPiElec/2)
+   nVirtOrbExpected=int(nTargetIb - nPiElec/2)
+   CPiOcc,nOccOrbExpected = MakeOverlappingOrbSubspace("Pi", "Occ", COcc, nOccOrbExpected,   CTargetIb, S1, Fock)
+   CPiVir,nVirtOrbExpected = MakeOverlappingOrbSubspace("Pi", "Vir", CVir, nVirtOrbExpected,   CTargetIb, S1, Fock)
+   print ("Number of occupied orbitals with non-zero overlap with the target AOs", nOccOrbExpected)
+   print ("Number of virtual orbitals with non-zero overlap with the target AOs", nVirtOrbExpected)
    return CPiOcc, CPiVir,nOccOrbExpected,nVirtOrbExpected
+
+
+def NonPlanarPz(iAt, Elements,Coords):
+   At = Elements[iAt]
+   # find number of bonded partners
+   iBonded = []
+   for (jAt, AtJ) in enumerate(Elements):
+      if iAt == jAt:
+         continue
+      rij = np.sum((Coords[iAt] - Coords[jAt])**2)**.5
+      if rij < 1.3 * (GetCovalentRadius(At) + GetCovalentRadius(AtJ)):
+         iBonded.append(jAt)
+   if len(iBonded)<3:
+       iBonded.append(iAt)
+   print ("for atoms #", iAt, " number of bonded atoms is ",   len(iBonded), "and partners are ",   iBonded)
+   #find a local pz orientation for an atom
+   vPz = GetPzOrientation(iBonded, Coords, Elements)
+   return vPz
+
+
+def MakePzMinaoVectorsNonPlanar(iTargetAtoms, vPzSet, Shells):
+#   nIb = len(Shells)*len(Shells[Atom])*len( Shells[AtomShell][AtomL])
+   nIb=0
+   for Atom in range(len(Shells)):
+    for AtomL in range(len(Shells[Atom])):
+     nIb += Shells[Atom][AtomL][2]
+   nVec = len(iTargetAtoms)
+
+   AoVecs = np.zeros((nIb, nVec))
+   for (iVec, iAt) in enumerate(iTargetAtoms):
+      ipxyz = FindValenceAoIndices(iAt, Shells, TargetL = 1)
+      AoVec = np.zeros(nIb)
+      AoVec[ipxyz] = vPzSet[iVec]
+
+      # each atom brings one pz orbital -> iVec = iiAt
+      AoVecs[:,iVec] = AoVec
+   return AoVecs
+
+
+def MakePiSystemOrbitalsNonPlanar(TargetName, iTargetAtomsForPiMO_, iTargetAtomsForBasis_,Elements,Coords, CIb, Shells, S1, S12, S2, Fock, COcc, CVir):
+   print("\n *** TARGET: {}\n".format(TargetName))
+   # convert from 1-based atom indices to 0-based indices.
+   iTargetAtomsForPiMO = np.array(iTargetAtomsForPiMO_) - 1
+   if iTargetAtomsForBasis_ is None:
+      iTargetAtomsForBasis = iTargetAtomsForPiMO
+   else:
+      iTargetAtomsForBasis = np.array(iTargetAtomsForBasis_) - 1
+
+   #make CAOMix
+   vPzSet=[]
+   for iAt in iTargetAtomsForBasis:
+    vPz=NonPlanarPz(iAt, Elements,Coords)
+    vPzSet.append(vPz)
+   CAoMix = MakePzMinaoVectorsNonPlanar(iTargetAtomsForBasis, vPzSet, Shells)
+
+   nPiElec = 0
+   for iAt in iTargetAtomsForBasis:
+      nPiElec += GetNumPiElec(iAt, Elements,Coords)
+
+   print ("    Formal number of elec in pi-system      {} ".format(nPiElec))
+   if (nPiElec % 2) != 0:
+      raise Exception("Got {} pi electrons. Shouldn't this be an even number?".format(nPiElec))
+
+   CTargetIb = np.dot(CIb, CAoMix)
+   nTargetIb = CAoMix.shape[1]
+   print ("    Number of target MINAO basis fn      {} ".format(nTargetIb))
+
+   print ("    size of CIb1          {} ".format(CIb.shape[0]))
+   print ("    size of CAomix1       {} ".format(CAoMix.shape[0]))
+   print ("    size of CIb2          {} ".format(CIb.shape[1]))
+   print ("    size of CAomix2       {} ".format(CAoMix.shape[1]))
+
+
+   nOccOrbExpected=int(nPiElec/2)
+   nVirtOrbExpected=int(nTargetIb - nPiElec/2)
+   CPiOcc,nOccOrbExpected = MakeOverlappingOrbSubspace("Pi", "Occ", COcc, nOccOrbExpected,   CTargetIb, S1, Fock)
+   CPiVir,nVirtOrbExpected = MakeOverlappingOrbSubspace("Pi", "Vir", CVir, nVirtOrbExpected,   CTargetIb, S1, Fock)
+   print ("Number of occupied orbitals with non-zero overlap with the target AOs", nOccOrbExpected)
+   print ("Number of virtual orbitals with non-zero overlap with the target AOs", nVirtOrbExpected)
+
+   return CPiOcc, CPiVir,nOccOrbExpected,nVirtOrbExpected
+
 
 
 def main():

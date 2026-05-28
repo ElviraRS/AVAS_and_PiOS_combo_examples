@@ -50,12 +50,12 @@ mf.kernel()
 
 
 N_Core,N_Act, N_Virt,nelec,coeff=MakeActiveSpace(mol,mf)
-print " # of core orbs    ", N_Core
-print " # of active orbs  ", N_Act
-print " # of virtual orbs ", N_Virt
+print (" # of core orbs    ", N_Core)
+print (" # of active orbs  ", N_Act)
+print (" # of virtual orbs ", N_Virt)
 norb=N_Act
-nalpha=(nelec+mol.spin)/2
-nbeta=(nelec-mol.spin)/2
+nalpha=(nelec+mol.spin)//2
+nbeta=(nelec-mol.spin)//2
 
 
 #===================this section is optional==============

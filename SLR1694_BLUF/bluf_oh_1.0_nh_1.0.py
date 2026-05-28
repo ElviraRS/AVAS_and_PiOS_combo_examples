@@ -37,11 +37,11 @@ mf.chkfile = 'hf_oh_1.0_nh_1.0.chk'
 mf.kernel()
 
 N_Core,N_Act, N_Virt,nelec,coeff=MakeActiveSpace(mol,mf)
-print " # of core orbs    ", N_Core
-print " # of active orbs  ", N_Act
-print " # of virtual orbs ", N_Virt
-nalpha=(nelec+mol.spin)/2
-nbeta=(nelec-mol.spin)/2
+print (" # of core orbs    ", N_Core)
+print (" # of active orbs  ", N_Act)
+print (" # of virtual orbs ", N_Virt)
+nalpha=(nelec+mol.spin)//2
+nbeta=(nelec-mol.spin)//2
 
 
 mycas = mcscf.CASSCF(mf, N_Act, [nalpha,nbeta])

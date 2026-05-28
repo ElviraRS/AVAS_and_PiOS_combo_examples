@@ -39,8 +39,8 @@ mf.kernel()
 PiAtoms = [1,2,3,4,5,6]
 N_Core,N_Act, N_Virt,nelec,coeff=MakePiOS(mol,mf,PiAtoms)
 norb=N_Act
-nalpha=nelec/2
-nbeta=nelec/2
+nalpha=nelec//2
+nbeta=nelec//2
 
 mycas = mcscf.CASSCF(mf, norb, [nalpha,nbeta])
 AS=range(N_Core,N_Core+N_Act)
